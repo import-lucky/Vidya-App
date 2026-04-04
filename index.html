@@ -6,45 +6,36 @@
     <title>Vidya - UPSC Executive OS</title>
     <style>
         :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #202124; --success: #34a853; --danger: #d93025; --accent: #fbbc04; }
-        
         body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
-        
         .app-container { display: grid; grid-template-columns: 1fr; height: 100vh; }
-        
         @media (min-width: 1024px) {
             .app-container { grid-template-columns: 280px 1fr 350px; }
             .sidebar, .ai-panel { display: flex !important; flex-direction: column; background: white; border: 1px solid #e0e0e0; height: 100vh; overflow-y: auto; }
             .mobile-nav { display: none; }
         }
-
         .tracker-card { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26,115,232,0.3); }
         .progress-bar { background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden; }
         .progress-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.5s; }
-
         .sidebar { display: none; padding: 20px; box-sizing: border-box; }
         .folder { padding: 12px; margin: 5px 0; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: 500; border-left: 3px solid transparent; }
         .folder:hover { background: #e8f0fe; color: var(--primary); border-left: 3px solid var(--primary); }
-
         .feed { overflow-y: auto; padding: 20px 20px 120px 20px; height: 100vh; box-sizing: border-box; scroll-behavior: smooth; }
         .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 15px; border-left: 5px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.03); animation: slideIn 0.3s ease-out; }
         .tag { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; background: #e8f0fe; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; }
-
         .ai-panel { display: none; padding: 20px; border-left: 1px solid #eee; box-sizing: border-box; }
         #chat-box { flex-grow: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 10px; background: #fafafa; font-size: 14px; line-height: 1.6; min-height: 200px; }
         .chat-input-area { display: flex; gap: 8px; background: white; padding: 5px; border-radius: 12px; border: 1px solid #ddd; flex-shrink: 0; }
         input[type="text"] { flex-grow: 1; padding: 10px; border: none; outline: none; font-size: 14px; min-width: 0; }
         .send-btn { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-
+        .send-btn:disabled { background: #aaa; cursor: not-allowed; }
         .mobile-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; align-items: flex-end; padding: 10px 0; border-top: 1px solid #ddd; z-index: 1000; }
         .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #5f6368; font-size: 10px; font-weight: 600; }
         .nav-item span { margin-top: 4px; }
-        
         .camera-btn { background: var(--primary); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -35px; border: 4px solid var(--bg); box-shadow: 0 5px 15px rgba(26,115,232,0.4); }
         .camera-btn span { font-size: 9px; margin-top: 2px; }
-
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         #loader { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:3000; align-items:center; justify-content:center; flex-direction:column; }
-        
+        .typing { color: #888; font-style: italic; font-size: 13px; padding: 8px; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -72,10 +63,8 @@
             <div class="progress-bar"><div class="progress-fill" id="goal-progress"></div></div>
             <p style="margin: 10px 0 0 0; font-size: 0.8rem; opacity: 0.9;" id="goal-text">0/5 pages digitalized</p>
         </div>
-
         <h2 style="font-size: 1.1rem; color: var(--danger);">📡 Live News Radar</h2>
         <div id="news-feed" style="margin-bottom: 25px;"><p style="font-size:12px; color:#777;">Scanning headlines...</p></div>
-
         <h2 style="font-size: 1.1rem; color: var(--primary);">📝 Study Vault</h2>
         <div id="notes-container"></div>
     </main>
@@ -85,7 +74,7 @@
         <div id="chat-box">Welcome, Director. I am ready to clear your UPSC doubts.</div>
         <div class="chat-input-area">
             <input type="text" id="chat-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter') handleChat()">
-            <button class="send-btn" onclick="handleChat()">Send</button>
+            <button class="send-btn" id="send-btn" onclick="handleChat()">Send</button>
         </div>
     </section>
 </div>
@@ -102,16 +91,15 @@
     <div id="mobile-chat-box" style="height:70%; overflow-y:auto; border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:10px; background:#f9f9f9;"></div>
     <div class="chat-input-area">
         <input type="text" id="mobile-chat-input" placeholder="Type doubt..." onkeydown="if(event.key==='Enter') handleChat(true)">
-        <button class="send-btn" onclick="handleChat(true)">Ask</button>
+        <button class="send-btn" id="mobile-send-btn" onclick="handleChat(true)">Ask</button>
     </div>
 </div>
 
 <input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="scanImage(this)">
 
 <script>
-    // ✅ FIXED: Changed v1 → v1beta (this was causing the error)
-    const KEY = "AIzaSyDlaJJV8KJiFIvNPJuFlkEkAxbnWMeB9j8";
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`;
+    const KEY = "AIzaSyCPFvgNw-LF5Loh5gyg1VgZVW9ISpj1AAE";
+    const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + KEY;
 
     let scanCount = parseInt(localStorage.getItem('scans') || 0);
 
@@ -124,38 +112,45 @@
     async function handleChat(isMobile = false) {
         const inputId = isMobile ? 'mobile-chat-input' : 'chat-input';
         const boxId = isMobile ? 'mobile-chat-box' : 'chat-box';
+        const btnId = isMobile ? 'mobile-send-btn' : 'send-btn';
         const inputEl = document.getElementById(inputId);
         const box = document.getElementById(boxId);
+        const btn = document.getElementById(btnId);
         const text = inputEl.value.trim();
-        if(!text) return;
+        if (!text) return;
 
         box.innerHTML += `<div style="margin-bottom:15px; text-align:right;"><span style="background:#e0e0e0; padding:8px 12px; border-radius:12px; display:inline-block;">${text}</span></div>`;
         inputEl.value = '';
+        btn.disabled = true;
+        btn.innerText = '...';
+        box.innerHTML += `<div class="typing" id="typing-indicator">⏳ Senior Mentor is thinking...</div>`;
         box.scrollTop = box.scrollHeight;
 
         try {
             const resp = await fetch(API_URL, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ contents: [{ parts: [{ text: "Context: UPSC Exam preparation. You are a senior UPSC mentor. Explain clearly and concisely: " + text }] }] })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: "You are a UPSC senior mentor. Answer clearly and concisely: " + text }] }] })
             });
             const data = await resp.json();
-
-            if(data.error) {
+            document.getElementById('typing-indicator')?.remove();
+            if (data.error) {
                 box.innerHTML += `<div style="color:var(--danger); background:#fde8e8; padding:12px; border-radius:10px; margin-bottom:10px; font-size:13px;">⚠️ API Error: ${data.error.message}</div>`;
-                return;
+            } else {
+                const reply = data.candidates[0].content.parts[0].text;
+                box.innerHTML += `<div style="color:var(--text); background:#e8f0fe; padding:15px; border-radius:12px; margin-bottom:15px; border-left:4px solid var(--primary);"><b>🤖 Senior Mentor:</b><br>${reply.replace(/\n/g, '<br>')}</div>`;
             }
-
-            const reply = data.candidates[0].content.parts[0].text;
-            box.innerHTML += `<div style="color:var(--text); background:#e8f0fe; padding:15px; border-radius:12px; margin-bottom:15px; border-left:4px solid var(--primary);"><b>Senior Mentor:</b><br>${reply.replace(/\n/g, '<br>')}</div>`;
             box.scrollTop = box.scrollHeight;
         } catch(e) {
-            box.innerHTML += `<div style="color:var(--danger); background:#fde8e8; padding:12px; border-radius:10px; margin-bottom:10px; font-size:13px;">⚠️ Connection error. Check your internet and API key.</div>`;
+            document.getElementById('typing-indicator')?.remove();
+            box.innerHTML += `<div style="color:var(--danger); background:#fde8e8; padding:12px; border-radius:10px; margin-bottom:10px; font-size:13px;">⚠️ Error: ${e.message}. <b>Upload this file to Netlify — do not open it directly from your computer.</b></div>`;
         }
+        btn.disabled = false;
+        btn.innerText = isMobile ? 'Ask' : 'Send';
     }
 
     async function scanImage(input) {
-        if(!input.files[0]) return;
+        if (!input.files[0]) return;
         document.getElementById('loader').style.display = 'flex';
         const reader = new FileReader();
         reader.readAsDataURL(input.files[0]);
@@ -164,21 +159,19 @@
             try {
                 const resp = await fetch(API_URL, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [
-                        {text: "Act as UPSC OCR. Extract text from image and summarize. Format: [SUBJECT] | [TITLE] | [SUMMARY]"},
-                        {inline_data: {mime_type: "image/jpeg", data: base64}}
+                        { text: "You are a UPSC OCR tool. Extract and summarize this image text. Reply in this exact format: SUBJECT | TITLE | SUMMARY" },
+                        { inline_data: { mime_type: "image/jpeg", data: base64 } }
                     ]}] })
                 });
                 const data = await resp.json();
-
-                if(data.error) { alert("API Error: " + data.error.message); return; }
-
+                if (data.error) { alert("Scan Error: " + data.error.message); return; }
                 saveNote(data.candidates[0].content.parts[0].text);
                 scanCount++;
                 localStorage.setItem('scans', scanCount);
                 updateGoal();
-            } catch(e) { alert("Scan failed. Check your connection."); }
+            } catch(e) { alert("Scan failed: " + e.message); }
             document.getElementById('loader').style.display = 'none';
             input.value = '';
         };
@@ -186,10 +179,10 @@
 
     function saveNote(raw) {
         const parts = raw.split('|');
-        const sub = parts[0] || "General";
-        const title = parts[1] || "New Scan";
-        const content = parts[2] || "Processing...";
-        const note = `<div class="card" data-subject="${sub.trim().toUpperCase()}"><span class="tag">${sub.trim()}</span><h3>${title.trim()}</h3><p>${content.trim()}</p></div>`;
+        const sub = (parts[0] || "General").trim();
+        const title = (parts[1] || "New Scan").trim();
+        const content = (parts[2] || raw).trim();
+        const note = `<div class="card" data-subject="${sub.toUpperCase()}"><span class="tag">${sub}</span><h3>${title}</h3><p>${content}</p></div>`;
         localStorage.setItem('vidya_notes', note + (localStorage.getItem('vidya_notes') || ''));
         loadNotes();
     }
@@ -201,31 +194,31 @@
     function filterNotes(sub) {
         loadNotes();
         const cards = document.getElementsByClassName('card');
-        for(let c of cards) { c.style.display = c.getAttribute('data-subject').includes(sub) ? 'block' : 'none'; }
+        for (let c of cards) { c.style.display = c.getAttribute('data-subject').includes(sub) ? 'block' : 'none'; }
     }
 
     async function fetchNews() {
         try {
             const resp = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.thehindu.com/news/national/feeder/default.rss');
             const data = await resp.json();
-            document.getElementById('news-feed').innerHTML = data.items.slice(0,2).map(i => `
+            document.getElementById('news-feed').innerHTML = data.items.slice(0, 3).map(i => `
                 <div style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--danger); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                     <h4 style="margin:0; font-size:14px;">${i.title}</h4>
-                    <button onclick="quickAnalyze('${i.title.replace(/'/g,"").replace(/"/g,'')}')" style="border:none; background:none; color:var(--primary); font-size:11px; font-weight:bold; cursor:pointer; margin-top:8px;">🤖 Analyze Impact</button>
+                    <button onclick="quickAnalyze('${i.title.replace(/'/g,'').replace(/"/g,'')}')" style="border:none; background:none; color:var(--primary); font-size:11px; font-weight:bold; cursor:pointer; margin-top:8px;">🤖 Analyze Impact</button>
                 </div>
             `).join('');
-        } catch(e) { document.getElementById('news-feed').innerHTML = "<p style='color:#999; font-size:12px;'>News radar offline. Check connection.</p>"; }
+        } catch(e) { document.getElementById('news-feed').innerHTML = "<p style='color:#999; font-size:12px;'>News radar offline.</p>"; }
     }
 
     function quickAnalyze(title) {
         document.getElementById('chat-input').value = "Analyze UPSC impact of: " + title;
         handleChat();
-        if(window.innerWidth < 1024) showOverlay('ai-overlay');
+        if (window.innerWidth < 1024) showOverlay('ai-overlay');
     }
 
     function syncOffline() {
         const notes = localStorage.getItem('vidya_notes') || '<p>No notes yet.</p>';
-        const blob = new Blob([`<html><body style="font-family:sans-serif;padding:20px;">${notes}</body></html>`], {type: 'text/html'});
+        const blob = new Blob([`<html><body style="font-family:sans-serif;padding:20px;">${notes}</body></html>`], { type: 'text/html' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'UPSC_Backup.html'; a.click();
     }
 
