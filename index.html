@@ -6,45 +6,195 @@
     <title>Vidya - UPSC Executive OS</title>
     <style>
         :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #202124; --success: #34a853; --danger: #d93025; --accent: #fbbc04; }
-        
-        /* 🛠️ FIX: Desktop Scroll Logic */
         body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
-        
         .app-container { display: grid; grid-template-columns: 1fr; height: 100vh; }
-        
         @media (min-width: 1024px) {
             .app-container { grid-template-columns: 280px 1fr 350px; }
             .sidebar, .ai-panel { display: flex !important; flex-direction: column; background: white; border: 1px solid #e0e0e0; height: 100vh; overflow-y: auto; }
             .mobile-nav { display: none; }
         }
-
-        /* Progress Tracker */
-        .tracker-card { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26,115,232,0.3); }
+        .feed { overflow-y: auto; padding: 20px 20px 120px 20px; height: 100vh; box-sizing: border-box; scroll-behavior: smooth; }
+        .tracker-card { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; }
         .progress-bar { background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden; }
         .progress-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.5s; }
-
-        /* Sidebar & Feed */
         .sidebar { display: none; padding: 20px; box-sizing: border-box; }
-        .folder { padding: 12px; margin: 5px 0; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: 500; border-left: 3px solid transparent; }
+        .folder { padding: 12px; margin: 5px 0; border-radius: 8px; cursor: pointer; font-weight: 500; border-left: 3px solid transparent; }
         .folder:hover { background: #e8f0fe; color: var(--primary); border-left: 3px solid var(--primary); }
-
-        .feed { overflow-y: auto; padding: 20px 20px 120px 20px; height: 100vh; box-sizing: border-box; scroll-behavior: smooth; }
-        .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 15px; border-left: 5px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.03); animation: slideIn 0.3s ease-out; }
+        .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 15px; border-left: 5px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         .tag { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; background: #e8f0fe; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; }
-
-        /* AI Panel */
         .ai-panel { display: none; padding: 20px; border-left: 1px solid #eee; box-sizing: border-box; }
-        #chat-box { flex-grow: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 10px; background: #fafafa; font-size: 14px; line-height: 1.6; min-height: 200px; }
-        .chat-input-area { display: flex; gap: 8px; background: white; padding: 5px; border-radius: 12px; border: 1px solid #ddd; flex-shrink: 0; }
-        input[type="text"] { flex-grow: 1; padding: 10px; border: none; outline: none; font-size: 14px; min-width: 0; }
+        #chat-box { flex-grow: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 10px; background: #fafafa; font-size: 14px; line-height: 1.6; }
+        .chat-input-area { display: flex; gap: 8px; background: white; padding: 5px; border-radius: 12px; border: 1px solid #ddd; }
+        input[type="text"] { flex-grow: 1; padding: 10px; border: none; outline: none; font-size: 14px; }
         .send-btn { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-
-        /* 📱 Mobile Nav with Labels */
         .mobile-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; align-items: flex-end; padding: 10px 0; border-top: 1px solid #ddd; z-index: 1000; }
         .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #5f6368; font-size: 10px; font-weight: 600; }
-        .nav-item span { margin-top: 4px; }
-        
-        .camera-btn { background: var(--primary); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -35px; border: 4px solid var(--bg); box-shadow: 0 5px 15px rgba(26,115,232,0.4); }
-        .camera-btn span { font-size: 9px; margin-top: 2px; }
+        .camera-btn { background: var(--primary); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; border: 4px solid var(--bg); box-shadow: 0 5px 15px rgba(26,115,232,0.4); }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; }
+        #loader { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:3000; align-items:center; justify-content:center; flex-direction:column; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
 
-        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index:
+<div id="loader">
+    <div style="border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+    <p style="margin-top:15px; font-weight:bold; color:var(--primary)">Senior is thinking...</p>
+</div>
+
+<div class="app-container">
+    <aside class="sidebar">
+        <h2 style="color: var(--primary); margin-top:0;">📚 The Vault</h2>
+        <div class="folder" onclick="filterNotes('POLITY')">📑 Polity</div>
+        <div class="folder" onclick="filterNotes('ECONOMICS')">📑 Economics</div>
+        <div class="folder" onclick="filterNotes('HISTORY')">📑 History</div>
+        <div class="folder" onclick="loadNotes()">🔄 All Notes</div>
+    </aside>
+
+    <main class="feed">
+        <div class="tracker-card">
+            <h3 style="margin:0; font-size: 1rem;">Goal: 5 Pages</h3>
+            <div class="progress-bar"><div class="progress-fill" id="goal-progress"></div></div>
+            <p style="margin: 10px 0 0 0; font-size: 0.8rem; opacity: 0.9;" id="goal-text">0/5 pages digitalized</p>
+        </div>
+        <h2 style="font-size: 1.1rem; color: var(--danger);">📡 Live News Radar</h2>
+        <div id="news-feed" style="margin-bottom: 25px;"><p style="font-size:12px; color:#777;">Loading news...</p></div>
+        <h2 style="font-size: 1.1rem; color: var(--primary);">📝 Study Vault</h2>
+        <div id="notes-container"></div>
+    </main>
+
+    <section class="ai-panel">
+        <h2 style="color: var(--success); margin-top:0;">🤖 Senior Mentor</h2>
+        <div id="chat-box">System Active. Type "Hello" to test connection.</div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Ask anything...">
+            <button class="send-btn" onclick="handleChat()">Send</button>
+        </div>
+    </section>
+</div>
+
+<nav class="mobile-nav">
+    <div class="nav-item" onclick="location.reload()">🏠<span>Home</span></div>
+    <div class="nav-item camera-btn" onclick="document.getElementById('cam').click()">📸</div>
+    <div class="nav-item" onclick="showOverlay('ai-overlay')">🤖<span>Mentor</span></div>
+</nav>
+
+<div id="ai-overlay" class="overlay">
+    <button onclick="hideOverlay('ai-overlay')" style="float:right;">Close ✕</button>
+    <h2>Senior Mentor</h2>
+    <div id="mobile-chat-box" style="height:70%; overflow-y:auto; border:1px solid #eee; padding:15px; background:#f9f9f9; border-radius:10px;"></div>
+    <div class="chat-input-area">
+        <input type="text" id="mobile-chat-input" placeholder="Type here...">
+        <button class="send-btn" onclick="handleChat(true)">Ask</button>
+    </div>
+</div>
+
+<input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="scanImage(this)">
+
+<script>
+    // 🛡️ RE-LOCKED KEY & STABLE ENDPOINT
+    const KEY = "AIzaSyCPFvgNw-LF5Loh5gyg1VgZVW9ISpj1AAE";
+    const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${KEY}`;
+
+    let scanCount = parseInt(localStorage.getItem('scans') || 0);
+
+    async function handleChat(isMobile = false) {
+        const inputId = isMobile ? 'mobile-chat-input' : 'chat-input';
+        const boxId = isMobile ? 'mobile-chat-box' : 'chat-box';
+        const inputEl = document.getElementById(inputId);
+        const box = document.getElementById(boxId);
+        const text = inputEl.value.trim();
+        if(!text) return;
+
+        box.innerHTML += `<div style="margin-bottom:15px; text-align:right;"><span style="background:#e0e0e0; padding:8px 12px; border-radius:12px; display:inline-block;">${text}</span></div>`;
+        inputEl.value = '';
+
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ contents: [{ parts: [{ text: "Explain clearly for UPSC: " + text }] }] })
+            });
+
+            const data = await resp.json();
+            
+            // 🛡️ DEBUG LOG: If error occurs, it will show in the chat box
+            if (data.error) {
+                box.innerHTML += `<div style="color:red; background:#fee; padding:10px; border-radius:10px; margin-top:10px;"><b>API ERROR:</b> ${data.error.message}<br><small>Key might be invalid or restricted.</small></div>`;
+            } else {
+                const reply = data.candidates[0].content.parts[0].text;
+                box.innerHTML += `<div style="background:#e8f0fe; padding:15px; border-radius:12px; margin-bottom:15px; border-left:4px solid var(--primary);"><b>Senior:</b><br>${reply.replace(/\n/g, '<br>')}</div>`;
+            }
+        } catch(e) {
+            box.innerHTML += `<div style="color:red;"><b>Network Error:</b> Please check internet or API Key.</div>`;
+        }
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function updateGoal() {
+        document.getElementById('goal-progress').style.width = Math.min((scanCount / 5) * 100, 100) + '%';
+        document.getElementById('goal-text').innerText = `${scanCount}/5 pages digitalized today`;
+    }
+
+    async function scanImage(input) {
+        if(!input.files[0]) return;
+        document.getElementById('loader').style.display = 'flex';
+        const reader = new FileReader();
+        reader.readAsDataURL(input.files[0]);
+        reader.onload = async () => {
+            const base64 = reader.result.split(',')[1];
+            try {
+                const resp = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [
+                        {text: "Extract and summarize as UPSC note. Format: [SUBJECT] | [TITLE] | [SUMMARY]"},
+                        {inline_data: {mime_type: "image/jpeg", data: base64}}
+                    ]}] })
+                });
+                const data = await resp.json();
+                saveNote(data.candidates[0].content.parts[0].text);
+                scanCount++;
+                localStorage.setItem('scans', scanCount);
+                updateGoal();
+            } catch(e) { alert("Scan failed. Check Key."); }
+            document.getElementById('loader').style.display = 'none';
+        };
+    }
+
+    function saveNote(raw) {
+        const parts = raw.split('|');
+        const note = `<div class="card" data-subject="${(parts[0]||'General').trim().toUpperCase()}"><span class="tag">${(parts[0]||'General').trim()}</span><h3>${(parts[1]||'New Note').trim()}</h3><p>${(parts[2]||'No summary').trim()}</p></div>`;
+        localStorage.setItem('vidya_notes', note + (localStorage.getItem('vidya_notes') || ''));
+        loadNotes();
+    }
+
+    function loadNotes() {
+        document.getElementById('notes-container').innerHTML = localStorage.getItem('vidya_notes') || "No notes yet.";
+    }
+
+    function filterNotes(sub) {
+        const cards = document.getElementsByClassName('card');
+        for(let c of cards) { c.style.display = c.getAttribute('data-subject').includes(sub) ? 'block' : 'none'; }
+    }
+
+    async function fetchNews() {
+        try {
+            const resp = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.thehindu.com/news/national/feeder/default.rss');
+            const data = await resp.json();
+            document.getElementById('news-feed').innerHTML = data.items.slice(0,2).map(i => `
+                <div style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--danger); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h4 style="margin:0; font-size:14px;">${i.title}</h4>
+                    <button onclick="document.getElementById('chat-input').value='Analyze impact: ${i.title.replace(/'/g,"")}'; handleChat();" style="border:none; background:none; color:var(--primary); font-size:11px; font-weight:bold; cursor:pointer; margin-top:8px;">🤖 Analyze</button>
+                </div>
+            `).join('');
+        } catch(e) { document.getElementById('news-feed').innerHTML = "Radar offline."; }
+    }
+
+    function showOverlay(id) { document.getElementById(id).style.display = 'block'; }
+    function hideOverlay(id) { document.getElementById(id).style.display = 'none'; }
+
+    window.onload = () => { loadNotes(); fetchNews(); updateGoal(); };
+</script>
+</body>
+</html>
