@@ -1,0 +1,5 @@
+# Ignore configuration files containing API keys
+config.js
+
+# Ignore Mac system files (optional, but good practice)
+.DS_Store
