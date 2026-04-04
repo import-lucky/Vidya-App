@@ -102,35 +102,55 @@
 <input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="scanImage(this)">
 
 <script>
-    const KEY = "AIzaSyDlaJJV8KJiFIvNPJuFlkEkAxbnWMeB9j8";
+    // 🔑 EXECUTIVE KEY: Ensure there are no spaces inside the quotes
+    const KEY = "AIzaSyDlaJJV8KJiFIvNPJuFlkEkAxbnWMeB9j8"; 
+    
     let scanCount = parseInt(localStorage.getItem('scans') || 0);
 
     function updateGoal() {
         const percent = Math.min((scanCount / 5) * 100, 100);
-        document.getElementById('goal-progress').style.width = percent + '%';
-        document.getElementById('goal-text').innerText = `${scanCount}/5 pages digitalized today`;
+        const fill = document.getElementById('goal-progress');
+        if(fill) fill.style.width = percent + '%';
+        const text = document.getElementById('goal-text');
+        if(text) text.innerText = `${scanCount}/5 pages digitalized today`;
     }
 
     async function handleChat(isMobile = false) {
         const inputId = isMobile ? 'mobile-chat-input' : 'chat-input';
         const boxId = isMobile ? 'mobile-chat-box' : 'chat-box';
-        const text = document.getElementById(inputId).value;
+        const inputEl = document.getElementById(inputId);
+        const box = document.getElementById(boxId);
+        
+        const text = inputEl.value.trim();
         if(!text) return;
 
-        const box = document.getElementById(boxId);
-        box.innerHTML += `<p><b>You:</b> ${text}</p>`;
-        document.getElementById(inputId).value = '';
+        box.innerHTML += `<p style="margin-bottom:10px;"><b>You:</b> ${text}</p>`;
+        inputEl.value = '';
+        box.scrollTop = box.scrollHeight;
 
         try {
-            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
+            // Updated to the latest stable API endpoint
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ contents: [{ parts: [{ text: "Explain this for UPSC Aspirant: " + text }] }] })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: "Context: UPSC Exam Mentor. Task: Explain this clearly: " + text }] }]
+                })
             });
-            const data = await resp.json();
-            box.innerHTML += `<p style="color:var(--primary); background:#f1f3f4; padding:10px; border-radius:8px;"><b>Senior:</b> ${data.candidates[0].content.parts[0].text}</p>`;
+
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error.message);
+            }
+
+            const reply = data.candidates[0].content.parts[0].text;
+            box.innerHTML += `<div style="color:var(--primary); background:#e8f0fe; padding:12px; border-radius:10px; margin-top:10px; line-height:1.6;"><b>Senior:</b><br>${reply.replace(/\n/g, '<br>')}</div>`;
             box.scrollTop = box.scrollHeight;
-        } catch(e) { alert("Check Connection/API Key"); }
+        } catch(e) {
+            console.error("AI Error:", e);
+            box.innerHTML += `<p style="color:var(--danger); font-size:12px;"><b>Error:</b> ${e.message}. Please check your internet or API Key status.</p>`;
+        }
     }
 
     async function scanImage(input) {
@@ -147,57 +167,96 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         contents: [{ parts: [
-                            {text: "Extract text from this image and summarize it as a UPSC Mains Note. Format: [SUBJECT] | [TITLE] | [SUMMARY]"},
+                            {text: "Act as an OCR and UPSC tutor. Extract text from this image and summarize it. Format: [SUBJECT] | [TITLE] | [SUMMARY]"},
                             {inline_data: {mime_type: "image/jpeg", data: base64}}
                         ]}]
                     })
                 });
                 const data = await resp.json();
-                saveNote(data.candidates[0].content.parts[0].text);
-                scanCount++;
-                localStorage.setItem('scans', scanCount);
-                updateGoal();
-            } catch(e) { alert("Scan Failed"); }
+                if(data.candidates) {
+                    saveNote(data.candidates[0].content.parts[0].text);
+                    scanCount++;
+                    localStorage.setItem('scans', scanCount);
+                    updateGoal();
+                } else {
+                    alert("AI couldn't read the image. Try a clearer photo.");
+                }
+            } catch(e) { 
+                alert("Scan Failed: Check API Key or Connection"); 
+            }
             document.getElementById('loader').style.display = 'none';
         };
     }
 
     function saveNote(raw) {
-        const [sub, title, content] = raw.split('|');
-        const note = `<div class="card" data-subject="${sub.trim().toUpperCase()}"><span class="tag">${sub}</span><h3>${title}</h3><p>${content}</p></div>`;
+        const parts = raw.split('|');
+        const sub = parts[0] || "GENERAL";
+        const title = parts[1] || "Untitled Scan";
+        const content = parts[2] || "No summary generated.";
+        
+        const note = `
+            <div class="card" data-subject="${sub.trim().toUpperCase()}">
+                <span class="tag">${sub.trim()}</span>
+                <h3>${title.trim()}</h3>
+                <p>${content.trim()}</p>
+                <small style="opacity:0.6; font-size:10px;">${new Date().toLocaleTimeString()}</small>
+            </div>`;
+        
         localStorage.setItem('vidya_notes', note + (localStorage.getItem('vidya_notes') || ''));
         loadNotes();
     }
 
     function loadNotes() {
-        document.getElementById('notes-container').innerHTML = localStorage.getItem('vidya_notes') || "No scans yet.";
+        const container = document.getElementById('notes-container');
+        container.innerHTML = localStorage.getItem('vidya_notes') || "<p style='color:#777;'>The Vault is empty. Start scanning!</p>";
     }
 
     function filterNotes(sub) {
         const cards = document.getElementsByClassName('card');
-        for(let c of cards) { c.style.display = c.getAttribute('data-subject').includes(sub) ? 'block' : 'none'; }
+        for(let c of cards) {
+            c.style.display = c.getAttribute('data-subject').includes(sub) ? 'block' : 'none';
+        }
     }
 
     async function fetchNews() {
-        const resp = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.thehindu.com/news/national/feeder/default.rss');
-        const data = await resp.json();
-        document.getElementById('news-feed').innerHTML = data.items.slice(0,2).map(i => `
-            <div style="background:white; padding:12px; border-radius:10px; margin-bottom:10px; border-left:3px solid var(--danger);">
-                <h4 style="margin:0; font-size:14px;">${i.title}</h4>
-                <button onclick="document.getElementById('chat-input').value='Analyze this news: ${i.title.replace(/'/g,"")}'; handleChat();" style="border:none; background:none; color:var(--primary); font-size:11px; font-weight:bold; cursor:pointer;">🤖 Analyze</button>
-            </div>
-        `).join('');
+        try {
+            const resp = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.thehindu.com/news/national/feeder/default.rss');
+            const data = await resp.json();
+            document.getElementById('news-feed').innerHTML = data.items.slice(0,3).map(i => `
+                <div style="background:white; padding:12px; border-radius:10px; margin-bottom:10px; border-left:3px solid var(--danger); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h4 style="margin:0; font-size:14px; color:#202124;">${i.title}</h4>
+                    <button onclick="triggerAnalyze('${i.title.replace(/'/g,"")}')" style="border:none; background:none; color:var(--primary); font-size:11px; font-weight:bold; cursor:pointer; padding: 5px 0;">🤖 Analyze for UPSC</button>
+                </div>
+            `).join('');
+        } catch(e) {
+            document.getElementById('news-feed').innerHTML = "Offline: Connect to see Live Radar.";
+        }
+    }
+
+    function triggerAnalyze(headline) {
+        const input = document.getElementById('chat-input');
+        input.value = `Analyze this for GS Papers: ${headline}`;
+        handleChat();
+        if(window.innerWidth < 1024) showOverlay('ai-overlay');
     }
 
     function syncOffline() {
-        const blob = new Blob([localStorage.getItem('vidya_notes')], {type: 'text/plain'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'UPSC_Notes.txt'; a.click();
+        const content = localStorage.getItem('vidya_notes') || "No notes to export.";
+        const blob = new Blob([content], {type: 'text/html'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'My_UPSC_Vault.html';
+        a.click();
     }
 
     function showOverlay(id) { document.getElementById(id).style.display = 'block'; }
     function hideOverlay(id) { document.getElementById(id).style.display = 'none'; }
 
-    window.onload = () => { loadNotes(); fetchNews(); updateGoal(); };
+    window.onload = () => { 
+        loadNotes(); 
+        fetchNews(); 
+        updateGoal(); 
+    };
 </script>
 </body>
 </html>
