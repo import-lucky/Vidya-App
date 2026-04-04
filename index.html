@@ -97,9 +97,10 @@
 
 <input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="scanImage(this)">
 
+<script src="config.js"></script>
+    
 <script>
-    const KEY = "AIzaSyCGylU5Kbnsp_GyG7X6H2f3OKvLYfrq63U";
-    const API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + KEY;
+    const API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + CONFIG.GEMINI_API_KEY;
     let scanCount = parseInt(localStorage.getItem('scans') || 0);
 
     function updateGoal() {
